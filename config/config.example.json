@@ -1,0 +1,289 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "debug": false,
+    "reload": false,
+    "workers": 1,
+    "max_connections": 100,
+    "keepalive_timeout": 30,
+    "ssl": {
+      "enabled": false,
+      "cert_file": "/etc/ssl/certs/kali_sse.crt",
+      "key_file": "/etc/ssl/private/kali_sse.key",
+      "ca_file": "/etc/ssl/certs/ca.crt"
+    }
+  },
+  
+  "mcp": {
+    "protocol_version": "1.0",
+    "server_name": "kali-sse-mcp",
+    "server_version": "1.0.0",
+    "capabilities": {
+      "tools": true,
+      "resources": true,
+      "prompts": false,
+      "logging": true
+    },
+    "max_request_size": 10485760,
+    "request_timeout": 300,
+    "heartbeat_interval": 30
+  },
+  
+  "sse": {
+    "enabled": true,
+    "endpoint": "/api/v1/events",
+    "heartbeat_interval": 30,
+    "max_connections": 50,
+    "buffer_size": 1024,
+    "compression": true,
+    "cors": {
+      "enabled": true,
+      "origins": ["*"],
+      "methods": ["GET", "POST", "OPTIONS"],
+      "headers": ["Authorization", "Content-Type", "Accept"]
+    }
+  },
+  
+  "security": {
+    "authentication": {
+      "enabled": true,
+      "method": "jwt",
+      "secret_key": "your-secret-key-change-this",
+      "algorithm": "HS256",
+      "token_expiry": 3600,
+      "refresh_token_expiry": 86400
+    },
+    
+    "authorization": {
+      "enabled": true,
+      "default_role": "viewer",
+      "roles": {
+        "admin": {
+          "permissions": ["*"],
+          "command_limits": {
+            "max_concurrent_tasks": 50,
+            "max_execution_time": 7200,
+            "allowed_tools": ["*"]
+          }
+        },
+        "operator": {
+          "permissions": [
+            "execute_command",
+            "view_tasks",
+            "cancel_own_tasks"
+          ],
+          "command_limits": {
+            "max_concurrent_tasks": 10,
+            "max_execution_time": 3600,
+            "allowed_tools": [
+              "nmap", "nikto", "dirb", "gobuster", 
+              "sqlmap", "wpscan", "ffuf", "masscan"
+            ]
+          }
+        },
+        "viewer": {
+          "permissions": [
+            "view_tasks",
+            "view_results"
+          ],
+          "command_limits": {
+            "max_concurrent_tasks": 0,
+            "max_execution_time": 0,
+            "allowed_tools": []
+          }
+        }
+      }
+    },
+    
+    "command_validation": {
+      "enabled": true,
+      "whitelist_mode": true,
+      "allowed_tools": {
+        "nmap": {
+          "path": "/usr/bin/nmap",
+          "allowed_options": [
+            "-sS", "-sT", "-sU", "-sV", "-O", "-A", "-p", 
+            "-T1", "-T2", "-T3", "-T4", "-T5", "--script"
+          ],
+          "forbidden_options": ["--privileged"],
+          "max_targets": 256,
+          "timeout_limit": 3600
+        },
+        "nikto": {
+          "path": "/usr/bin/nikto",
+          "allowed_options": [
+            "-h", "-p", "-ssl", "-Format", "-output", "-Tuning"
+          ],
+          "forbidden_options": ["-update"],
+          "max_targets": 1,
+          "timeout_limit": 1800
+        },
+        "dirb": {
+          "path": "/usr/bin/dirb",
+          "allowed_options": ["-r", "-S", "-w", "-x", "-z"],
+          "forbidden_options": [],
+          "max_targets": 1,
+          "timeout_limit": 1800
+        },
+        "gobuster": {
+          "path": "/usr/bin/gobuster",
+          "allowed_options": [
+            "dir", "dns", "fuzz", "s3", "gcs", "-u", "-w", 
+            "-t", "-x", "-s", "-b", "-k", "-n", "-r"
+          ],
+          "forbidden_options": [],
+          "max_targets": 1,
+          "timeout_limit": 1800
+        }
+      },
+      
+      "dangerous_patterns": [
+        "rm\\s+-rf",
+        "dd\\s+if=",
+        ">\\s*/dev/",
+        "\\|\\s*sh",
+        "&&\\s*rm",
+        "`.*`",
+        "\\$\\(.*\\)"
+      ],
+      
+      "input_validation": {
+        "max_command_length": 1000,
+        "max_args_count": 50,
+        "allowed_chars": "a-zA-Z0-9\\s\\-\\._:/@",
+        "forbidden_chars": [";", "|", "&", "`", "$", "(", ")", "{", "}"]
+      }
+    },
+    
+    "rate_limiting": {
+      "enabled": true,
+      "requests_per_minute": 60,
+      "burst_limit": 10,
+      "ban_duration": 300,
+      "whitelist_ips": ["127.0.0.1", "::1"]
+    },
+    
+    "audit": {
+      "enabled": true,
+      "log_level": "INFO",
+      "log_file": "/var/log/kali_sse/audit.log",
+      "max_file_size": 104857600,
+      "backup_count": 10,
+      "events": [
+        "authentication",
+        "authorization", 
+        "command_execution",
+        "security_violation",
+        "system_error"
+      ]
+    }
+  },
+  
+  "execution": {
+    "default_timeout": 300,
+    "max_timeout": 3600,
+    "max_concurrent_tasks": 20,
+    "working_directory": "/tmp/kali_sse",
+    "cleanup_interval": 3600,
+    "preserve_output": true,
+    "output_max_size": 10485760,
+    
+    "environment": {
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LANG": "en_US.UTF-8",
+      "LC_ALL": "en_US.UTF-8"
+    },
+    
+    "resource_limits": {
+      "max_memory": 1073741824,
+      "max_cpu_time": 3600,
+      "max_file_size": 104857600,
+      "max_processes": 10
+    }
+  },
+  
+  "intelligence": {
+    "enabled": true,
+    "syntax_checking": {
+      "enabled": true,
+      "auto_correct": false,
+      "suggestion_threshold": 0.8
+    },
+    
+    "error_learning": {
+      "enabled": true,
+      "learning_rate": 0.1,
+      "memory_size": 1000,
+      "pattern_threshold": 0.7
+    },
+    
+    "strategy_optimization": {
+      "enabled": true,
+      "optimization_interval": 3600,
+      "success_weight": 0.7,
+      "time_weight": 0.3
+    },
+    
+    "task_chaining": {
+      "enabled": true,
+      "max_chain_length": 10,
+      "auto_trigger": false
+    }
+  },
+  
+  "storage": {
+    "database": {
+      "type": "sqlite",
+      "url": "sqlite:///var/lib/kali_sse/kali_sse.db",
+      "pool_size": 10,
+      "max_overflow": 20,
+      "pool_timeout": 30
+    },
+    
+    "cache": {
+      "type": "redis",
+      "url": "redis://localhost:6379/0",
+      "ttl": 3600,
+      "max_connections": 10
+    },
+    
+    "file_storage": {
+      "base_path": "/var/lib/kali_sse/files",
+      "max_file_size": 104857600,
+      "allowed_extensions": [".txt", ".json", ".xml", ".csv", ".log"],
+      "cleanup_interval": 86400
+    }
+  },
+  
+  "monitoring": {
+    "metrics": {
+      "enabled": true,
+      "endpoint": "/metrics",
+      "include_system_metrics": true
+    },
+    
+    "health_check": {
+      "enabled": true,
+      "endpoint": "/health",
+      "check_interval": 30
+    },
+    
+    "logging": {
+      "level": "INFO",
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+      "file": "/var/log/kali_sse/app.log",
+      "max_file_size": 104857600,
+      "backup_count": 5,
+      "console": true
+    }
+  },
+  
+  "development": {
+    "debug_mode": false,
+    "auto_reload": false,
+    "profiling": false,
+    "test_mode": false,
+    "mock_commands": false
+  }
+}
